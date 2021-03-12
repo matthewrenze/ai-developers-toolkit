@@ -1,0 +1,54 @@
+# Reinforcement Learning with Microsoft Bonsai
+
+# Specify the language version
+inkling "2.0"
+
+# Import libraries
+using Math
+using Goal
+
+# Set the maximum angle of pole (in radians)
+const MaxPoleAngle = (12 * Math.Pi) / 180
+
+# Set the length of the cartpole track (in meters)
+const TrackLength = 0.5
+
+# Create a type that represents the agent's state
+type AgentState {    
+    cart_position: number,
+    cart_velocity: number,
+    pole_angle: number,
+    pole_angular_velocity: number,
+}
+
+# Create a type that represents the agent's action
+type AgentAction {
+    command: number<-1 .. 1>
+}
+
+# Create a concept graph with a single concept to be learned
+graph (input: AgentState): AgentAction {
+    concept BalancePole(input): AgentAction {
+        curriculum {  
+            
+            # Specify the training source is the cartpole simulator
+            source simulator (Action: AgentAction): AgentState {
+                package "Cartpole"
+            }
+
+            # Set the number of iterations per training episode
+            training {
+                EpisodeIterationLimit: 1000
+            }
+
+            # Specify the goal state as two subgoals
+            goal (State: AgentState) {
+                avoid `Fall Over`: Math.Abs(State.pole_angle) in Goal.RangeAbove(MaxPoleAngle)
+                avoid `Out of Range`: Math.Abs(State.cart_position) in Goal.RangeAbove(TrackLength / 2)
+            }
+        }
+    }
+}
+
+# Connect the simulation visualizer to the web interface.
+const SimulatorVisualizer = "/cartpoleviz/"
